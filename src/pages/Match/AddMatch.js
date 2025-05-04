@@ -23,6 +23,7 @@ export default function AddMatch(details) {
 
 
   const [CategoryValue, setCategory] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('');
   
 
   
@@ -42,7 +43,7 @@ export default function AddMatch(details) {
     initialValues: {
       mname: update ? details.data.matchfname : '',
       mlname: update ? details.data.matchlname : '',
-      selectcat: update ?  details.data.cat_id : '',
+      selectcat: update ? details.data.cat_id : '',
       treg_fee: update ? details.data.treg_fee : '',
       preg_fee: update ? details.data.preg_fee : '',
       tbid_amt: update ? details.data.tbid_amt : '',
@@ -58,14 +59,15 @@ export default function AddMatch(details) {
   const getCategory = () => { 
     axios.post("http://localhost:3001/getCat",{
     }).then((response) =>{
-      console.log(response.data);
-      if(response.data.length > 0 ){        
-          console.log(response.data)
-          setCategory(response.data);        
+      if (response.data && response.data.length > 0) {
+        setCategory(response.data);
+      } else {
+        console.log("No categories found!");
+        setCategory([]);
       }
-      else{
-        console.log("No data!");
-      }
+    }).catch((error) => {
+      console.error('Error fetching categories:', error);
+      setCategory([]);
     });
   }
 
@@ -195,21 +197,20 @@ export default function AddMatch(details) {
         <Select
           labelId="demo-simple-select-standard-label"
           id="demo-simple-select-standard"
-          label="Position"
-          defaultValue={ details.updated ?  details.data.cat_id : ''}
-          value= { CategoryValue ? CategoryValue : '' }
+          label="Category"
+          value={selectedCategory}
+          onChange={(e) => {
+            setSelectedCategory(e.target.value);
+          }}
           {...getFieldProps('selectcat')}
-          error = {Boolean(touched.selectcat &&  errors.selectcat)}
-          helperText = {touched.selectcat && errors.selectcat}
         >
-          
+          <MenuItem value="">Select a category</MenuItem>
           {CategoryValue.map((data) => {
-              return (
-                  <MenuItem value={data.cat_id}>
-                  {data.cat_name}
-                </MenuItem>
-              );
-
+            return (
+              <MenuItem value={data.cat_id}>
+                {data.cat_name}
+              </MenuItem>
+            );
           })}
         </Select>
       </FormControl>

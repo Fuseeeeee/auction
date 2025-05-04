@@ -12,9 +12,9 @@ import CloseIcon from '@mui/icons-material/Close';
 
 
 
-export default function AddPosition(details) {
+export default function AddPosition({ open, onClose, submit, updated, button, data, matchId }) {
 
-  const [update, setUpdate] = useState(details.updated);
+  const [update, setUpdate] = useState(updated);
 
   
   
@@ -26,7 +26,7 @@ export default function AddPosition(details) {
 
   const formik = useFormik({
     initialValues: {
-      pos_name: update ? details.data.pos_name : '',
+      pos_name: update ? data.pos_name : '',
     },
     validationSchema: validSchema,
     onSubmit: (values, actions) => {
@@ -42,61 +42,67 @@ export default function AddPosition(details) {
   };
 
   const onAdd = () => {
+    if (!values.pos_name.trim()) {
+      alert('Position name is required');
+      return;
+    }
 
     const updateCall = () => {
       console.log(values.pos_name);
-      axios.post("http://localhost:3001/updatePos",{
+      axios.post("http://localhost:3001/updatePos", {
         pos_value: values.pos_name,
-        pos_id: details.data.pos_id,
+        pos_id: data.pos_id,
       }).then((res) => {
-          if (res.data[0][0].errorCode === "Updated") {
-            setAlert();
-          } else {
-            alert(res.data.errorMsg);
-          }
-        }).catch(() => {
-          console.log('No internet connection found. App is running in offline mode.');
-        });
+        if (res.data[0][0].errorCode === "Updated") {
+          setAlert('Position updated successfully');
+          submit();
+        } else {
+          alert(res.data.errorMsg || 'Failed to update position');
+        }
+      }).catch((error) => {
+        console.error('Error updating position:', error);
+        alert('Failed to update position. Please try again.');
+      });
     }
 
-    const InsertCall = () =>{
-      console.log(values.pos_name);  
-      let mid = localStorage.getItem("MatchID");    
-      axios.post("http://localhost:3001/InsertPos",{
+    const InsertCall = () => {
+      if (!matchId) {
+        alert('Please select a match first');
+        return;
+      }
+
+      axios.post("http://localhost:3001/InsertPos", {
         pos_value: values.pos_name,
-        mid: mid,
+        mid: matchId,
       }).then((res) => {
-          if (res.data[0][0].msg === "Inserted!") {
-            setAlert();
-            console.log(res.data);
-          } else {
-            console.log(res.data);
-            alert(res.data[0][0].msg);
-          }
-        }).catch(() => {
-          console.log('No internet connection found. App is running in offline mode.');
-        });
-      
+        if (res.data[0][0].msg === "Inserted!") {
+          setAlert('Position added successfully');
+          submit();
+        } else {
+          alert(res.data[0][0].msg || 'Failed to add position');
+        }
+      }).catch((error) => {
+        console.error('Error adding position:', error);
+        alert('Failed to add position. Please try again.');
+      });
     }
 
-    if(update){
+    if (update) {
       updateCall();
-      
-    }else{
+    } else {
       InsertCall();
     }
-    details.submit();
     alertTimeOut();
   };
   
   const onclose = () => {
     formik.resetForm();
-    details.onClose();
+    onClose();
   };
   
   return (
     <div>
-      <Dialog fullScreen open={details.open} onClose={details.onClose}>
+      <Dialog fullScreen open={open} onClose={onClose}>
         <AppBar sx={{ position: 'relative' }}>
           <Toolbar>
             <IconButton edge="start" color="inherit" onClick={onclose} aria-label="close">
@@ -106,7 +112,7 @@ export default function AddPosition(details) {
               Add Position
             </Typography>
             <Button autoFocus color="inherit" onClick={handleSubmit}>
-              {details.button}
+              {button}
             </Button>
           </Toolbar>
         </AppBar>

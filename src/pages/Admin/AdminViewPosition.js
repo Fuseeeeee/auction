@@ -96,23 +96,20 @@ export default function AdminViewPosition() {
 
   const mid = localStorage.getItem("MatchID");
   const display = () => {
-
-    if (selectedMatch == "") return;
-    console.log(selectedMatch);
+    if (!selectedMatch) return;
+    
     axios.post("http://localhost:3001/getPos", {
       mid: selectedMatch
     }).then((res) => {
-      console.log(res);
-      if (res.data) {
-        console.log(res);
+      if (res.data && res.data[0]) {
         setUserList(res.data[0]);
-      }
-      else {
+      } else {
         setUserList([]);
       }
     }).catch((error) => {
-      console.log(error);
-      console.log('No internet connection found. App is running in offline mode.');
+      console.error('Error fetching positions:', error);
+      setUserList([]);
+      alert('Failed to fetch positions. Please try again.');
     });
   }
 
@@ -185,6 +182,7 @@ export default function AdminViewPosition() {
         updated={upd}
         button={button}
         data={data}
+        matchId={selectedMatch}
       />
     ));
     setOpen(true);
@@ -236,27 +234,28 @@ export default function AdminViewPosition() {
             }
           />
         )}
-                  <Select
-                  width={100}
-            labelId="demo-simple-select-standard-label"
-            id="demo-simple-select-standard"
-            label="Matches"
-            value=""
-            onChange={(e) => {
-              console.log(e)
-              setSelectedMatch(e.target.value)
-            }}
-          >
-
-            {MacthDetails.map((data) => {
-              return (
-                <MenuItem value={data.match_id}>
-                  {data.matchfname} {data.matchlname}
-                </MenuItem>
-              );
-
-            })}
-          </Select>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <InputLabel id="demo-simple-select-standard-label">Matches</InputLabel>
+                    <Select
+                      width={100}
+                      labelId="demo-simple-select-standard-label"
+                      id="demo-simple-select-standard"
+                      label="Matches"
+                      value={selectedMatch}
+                      onChange={(e) => {
+                        setSelectedMatch(e.target.value);
+                      }}
+                    >
+                      <MenuItem value="">Select a match</MenuItem>
+                      {MacthDetails.map((data) => {
+                        return (
+                          <MenuItem value={data.match_id}>
+                            {data.matchfname} {data.matchlname}
+                          </MenuItem>
+                        );
+                      })}
+                    </Select>
+                  </Stack>
   
         {numSelected > 0 ? (
           <Tooltip title="Delete">
