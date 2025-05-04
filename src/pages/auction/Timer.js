@@ -14,9 +14,11 @@ import {Typography } from '@mui/material';
             setcolur("red");
         }
         if(maxTime<=0 ){
-            setTime("0")
+            setTime("Auction Finished")
             clearInterval(timer);
-            props.callback();
+            if(props.onTimeEnd){
+                props.onTimeEnd();
+            }
         }else{
             setTime(maxTime);
         }
@@ -42,7 +44,7 @@ import {Typography } from '@mui/material';
                         color:`${colur}`
                     }}
                         >
-                      TIME LEFT:  {`${time} sec`}
+                      {time === "Auction Finished" ? time : `TIME LEFT: ${time} sec`}
                     </Typography>
   )
 }

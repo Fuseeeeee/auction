@@ -34,19 +34,16 @@ export default function TeamBid(props) {
 
   const [BidHistory, setBidHistory] = useState([]);
 
-  const [timer, setTimer] = useState(false);
+  const [timerTime, setTimerTime] = useState(60);
+  const [auctionEnded, setAuctionEnded] = useState(false);
 
   const [socketID, setSocket] = useState(false);
 
   const [displayname, setdisplayName] = useState();
 
-  const [timerTime, setTimertime] = useState();
-
-  const [biStatus, setBistatus] = useState();
-
   const [biamountLeft, setbidamountLeft] = useState();
 
-
+  const [biStatus, setBistatus] = useState();
 
   const Auctioncheck = () => {
 
@@ -61,7 +58,6 @@ export default function TeamBid(props) {
       console.log('No internet connection found. App is running in offline mode.');
     });
   }
-
 
   const mid = localStorage.getItem("mid");
   const teamid = localStorage.getItem("TeamID");
@@ -83,14 +79,14 @@ export default function TeamBid(props) {
     });
   }
 
-
   const timeCalculate = (times) => {
     const cDate = new Date();
     const lDate = new Date(times);
     const fSec = cDate.getTime() - lDate.getTime();
-    setTimertime(60 - Math.floor(fSec / 1000));
+    setTimerTime(60 - Math.floor(fSec / 1000));
     console.log(60 - Math.floor(fSec / 1000));
   }
+
   const timerSetting = () => {
     axios.post("http://localhost:3001/getTime", {
       mid: mid,
@@ -105,7 +101,6 @@ export default function TeamBid(props) {
       console.log('No internet connection found. App is running in offline mode.');
     });
   }
-
 
   const AuctionHistory = () => {
 
@@ -128,6 +123,20 @@ export default function TeamBid(props) {
     });
   }
 
+  const handleTimeEnd = () => {
+    try {
+      setAuctionEnded(true);
+      if (socket && socket.connected) {
+        socket.emit('auction-end', mid, props.data.player_id);
+      }
+      if (props.onAuctionEnd) {
+        props.onAuctionEnd();
+      }
+    } catch (error) {
+      console.error('Error handling auction end:', error);
+      setMsg('Error ending auction');
+    }
+  };
 
   useEffect(() => {
 
@@ -138,10 +147,6 @@ export default function TeamBid(props) {
 
     socket = io('http://localhost:3001')
 
-
-
-
-
     socket.emit("setup", mid);
 
     socket.on("connection", () => setSocket(true));
@@ -149,24 +154,34 @@ export default function TeamBid(props) {
     socket.emit("join-auction", 1);
 
     socket.on('receive-bid', (number, obj, name, playerid) => {
-      console.log(number);
-      console.log(obj);
-      console.log(name);
-      console.log(playerid);
-
-
-      if (mid === number) {
+      if (mid === number && playerid === props.data.player_id) {
         lastAmt(obj);
-        console.log(amt);
         setdisplayName(name);
+        // Update timer on new bid
+        setTimerTime(60);
       }
-    })
+    });
 
-  }, [])
+    socket.on('auction-start', (matchId, playerId) => {
+      if (matchId === mid && playerId === props.data.player_id) {
+        setTimerTime(60);
+        setAuctionEnded(false);
+      }
+    });
 
+    socket.on('auction-end', (matchId, playerId) => {
+      if (matchId === mid && playerId === props.data.player_id) {
+        setAuctionEnded(true);
+        setTimerTime(0);
+      }
+    });
 
-
-
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+    };
+  }, [mid, props.data.player_id, socket])
 
   const validSchema = Yup.object().shape({
     bidamt: Yup.string('Bid Amount is Required!').required('Bid Amount is required'),
@@ -183,8 +198,6 @@ export default function TeamBid(props) {
   });
 
   const { errors, touched, values, isSubmitting, handleSubmit, getFieldProps } = formik;
-
-
 
   const bidamtCheck = () => {
     if (values.bidamt < props.data.baseamt || values.bidamt > biamountLeft) {
@@ -203,10 +216,6 @@ export default function TeamBid(props) {
     }
 
   }
-  const timerCallback = () => {
-
-
-  }
 
   console.log(timerTime)
   return (
@@ -215,7 +224,6 @@ export default function TeamBid(props) {
         open={bidamt}
         autoHideDuration={6000}
         onClose={() => { }}
-
       >
         <Alert severity="error">{msg}</Alert>
       </Snackbar>
@@ -276,7 +284,6 @@ export default function TeamBid(props) {
                   Player Name
                 </Typography>
                 <Typography variant="body2" style={{ color: '#555' }}>
-                  {/* {player.player_fname +" " +player.Player_lname} */}
                   {props.data.player_fname + " " + props.data.Player_lname}
                 </Typography>
               </Stack>
@@ -339,7 +346,11 @@ export default function TeamBid(props) {
           </Grid>
         </Grid>
 
-        {timerTime && <Timer maxTime={timerTime} callback={timerCallback} />}
+        {timerTime && <Timer 
+          maxTime={timerTime} 
+          onTimeEnd={handleTimeEnd} 
+          key={timerTime}
+        />}
 
         <Grid
           container
